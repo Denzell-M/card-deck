@@ -1,7 +1,7 @@
 export function Hello() {
   return (
-    <>
-      <p>Hello, World!</p>
-    </>
+    <div className="text-center">
+      <p className="text-2xl font-bold text-sky-400">Hello, World!</p>
+    </div>
   );
 }
