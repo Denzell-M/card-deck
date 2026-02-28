@@ -1,23 +1,39 @@
 import React, { useMemo, useState } from "react";
 import { Card } from "./components/Card";
 import { Deck } from "./components/Deck";
-import { makeStandardDeck } from "./game/deckUtils";
+import { drawOneRandom, makeStandardDeck } from "./game/deckUtils";
 
 export default function App() {
   const initialDeck = useMemo(() => makeStandardDeck(), []);
 
-  const [deck] = useState(initialDeck);
-  const [hand] = useState([]);
-  const [pickedIndex] = useState(null);
+  const [deck, setDeck] = useState(initialDeck);
+  const [hand, setHand] = useState([]);
+  const [pickedIndex, setPickedIndex] = useState(null);
 
   const remaining = deck.length;
+
+  function clearPicked() {
+    setPickedIndex(null);
+  }
 
   function deal() {}
   function reset() {}
   function tossPicked() {}
   function wildcard() {}
   function regroup() {}
-  function onClickDeck() {}
+
+  function onClickDeck() {
+    setDeck((prevDeck) => {
+      const { card, nextDeck } = drawOneRandom(prevDeck);
+      if (!card) return prevDeck;
+
+      setHand((prevHand) => [...prevHand, card]);
+      clearPicked();
+
+      return nextDeck;
+    });
+  }
+
   function onCardClick() {}
 
   const btnBase =
@@ -94,7 +110,7 @@ export default function App() {
             </div>
           </section>
 
-          <section className="min-h-65 rounded-2xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/30">
+          <section className="min-h-[260px] rounded-2xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/30">
             <div className="flex flex-wrap gap-3">
               {hand.length === 0 ? (
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
