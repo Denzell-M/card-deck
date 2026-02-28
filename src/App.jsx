@@ -1,12 +1,16 @@
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
 import { Card } from "./components/Card";
 import { Deck } from "./components/Deck";
+import { makeStandardDeck } from "./game/deckUtils";
 
 export default function App() {
+  const initialDeck = useMemo(() => makeStandardDeck(), []);
+
+  const [deck] = useState(initialDeck);
   const [hand] = useState([]);
   const [pickedIndex] = useState(null);
 
-  const remaining = 52;
+  const remaining = deck.length;
 
   function deal() {}
   function reset() {}
