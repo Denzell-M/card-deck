@@ -49,3 +49,20 @@ export function drawOneRandom(deck) {
 
   return { card, nextDeck };
 }
+
+export function drawNRandom(deck, n) {
+  let currentDeck = deck;
+  const drawn = [];
+
+  const count = Math.min(n, currentDeck.length);
+
+  for (let i = 0; i < count; i++) {
+    const { card, nextDeck } = drawOneRandom(currentDeck);
+    if (!card) break;
+
+    drawn.push(card);
+    currentDeck = nextDeck;
+  }
+
+  return { drawn, nextDeck: currentDeck };
+}
