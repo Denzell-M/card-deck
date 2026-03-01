@@ -56,6 +56,7 @@ export default function App() {
 
   function tossPicked() {}
 
+  // Not working yet
   function wildcard() {
     setHand((prev) => shuffleArray(prev));
     clearPicked();
