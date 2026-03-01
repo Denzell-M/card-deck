@@ -1,12 +1,16 @@
-import React, { useMemo, useState } from "react";
+import { useState } from "react";
 import { Card } from "./components/Card";
 import { Deck } from "./components/Deck";
-import { drawOneRandom, makeStandardDeck } from "./game/deckUtils";
+import {
+  drawNRandom,
+  drawOneRandom,
+  makeStandardDeck,
+  shuffleArray,
+} from "./game/deckUtils";
 
 export default function App() {
-  const initialDeck = useMemo(() => makeStandardDeck(), []);
-
-  const [deck, setDeck] = useState(initialDeck);
+  // Lazy init so we only create the initial deck once.
+  const [deck, setDeck] = useState(() => makeStandardDeck());
   const [hand, setHand] = useState([]);
   const [pickedIndex, setPickedIndex] = useState(null);
 
@@ -16,10 +20,46 @@ export default function App() {
     setPickedIndex(null);
   }
 
-  function deal() {}
-  function reset() {}
+  function deal(n) {
+    setDeck((prevDeck) => {
+      const toReturn = hand.filter(
+        (card) => !String(card.id).startsWith("WILD-"),
+      );
+      const restoreDeck = [...prevDeck, ...toReturn];
+
+      const { drawn, nextDeck } = drawNRandom(restoreDeck, n);
+
+      setHand(drawn);
+      clearPicked();
+
+      return nextDeck;
+    });
+  }
+
+  // function returnHandToDeck() {
+  //   setHand((prevHand) => {
+  //     const toReturn = prevHand.filter(
+  //       (card) => !String(card.id).startsWith("WILD-"),
+  //     );
+  //     setDeck((prevDeck) => [...prevDeck, ...toReturn]);
+  //     return [];
+  //   });
+  //   setPickedIndex(null);
+  // }
+
+  function reset() {
+    // brand new deck, empty hand, nothing picked.
+    setDeck(makeStandardDeck());
+    setHand([]);
+    setPickedIndex(null);
+  }
+
   function tossPicked() {}
-  function wildcard() {}
+
+  function wildcard() {
+    setHand((prev) => shuffleArray(prev));
+    clearPicked();
+  }
   function regroup() {}
 
   function onClickDeck() {
@@ -110,18 +150,18 @@ export default function App() {
             </div>
           </section>
 
-          <section className="min-h-[260px] rounded-2xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/30">
+          <section className="min-h-65 rounded-2xl border border-white/15 bg-white/5 p-4 shadow-xl shadow-black/30">
             <div className="flex flex-wrap gap-3">
               {hand.length === 0 ? (
                 <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/75">
                   No cards selected. Click the deck or Deal.
                 </div>
               ) : (
-                hand.map((c, i) => (
+                hand.map((card, i) => (
                   <Card
-                    key={c.id}
-                    suit={c.suit}
-                    value={c.value}
+                    key={card.id}
+                    suit={card.suit}
+                    value={card.value}
                     isPicked={pickedIndex === i}
                     onClick={() => onCardClick(i)}
                     indexLabel={i + 1}
