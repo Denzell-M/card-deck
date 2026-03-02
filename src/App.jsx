@@ -29,9 +29,28 @@ function reducer(state, action) {
 
     case "PICK": {
       const i = action.index;
+
+      // Spec behavior:
+      // - click a card => it becomes picked
+      // - click the picked card again => unpick
+      // - click another card while one is picked => swap them, then clear picked
+      if (state.pickedIndex == null) {
+        return { ...state, pickedIndex: i };
+      }
+
+      if (state.pickedIndex === i) {
+        return { ...state, pickedIndex: null };
+      }
+
+      // swap
+      const a = state.pickedIndex;
+      const nextHand = [...state.hand];
+      [nextHand[a], nextHand[i]] = [nextHand[i], nextHand[a]];
+
       return {
         ...state,
-        pickedIndex: state.pickedIndex === i ? null : i,
+        hand: nextHand,
+        pickedIndex: null,
       };
     }
 
