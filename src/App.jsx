@@ -21,17 +21,24 @@ export default function App() {
   }
 
   function deal(n) {
+    // Deal should replace the hand with n random cards.
+    // To avoid duplicates or stale state, compute everything from the previous deck + previous hand.
     setDeck((prevDeck) => {
-      const toReturn = hand.filter(
-        (card) => !String(card.id).startsWith("WILD-"),
-      );
-      const restoreDeck = [...prevDeck, ...toReturn];
+      let nextDeck = prevDeck;
 
-      const { drawn, nextDeck } = drawNRandom(restoreDeck, n);
+      setHand((prevHand) => {
+        const toReturn = prevHand.filter(
+          (card) => !String(card.id).startsWith("WILD-"),
+        );
+        const restoredDeck = [...nextDeck, ...toReturn];
 
-      setHand(drawn);
-      clearPicked();
+        const result = drawNRandom(restoredDeck, n);
+        nextDeck = result.nextDeck;
 
+        return result.drawn;
+      });
+
+      setPickedIndex(null);
       return nextDeck;
     });
   }
@@ -61,6 +68,7 @@ export default function App() {
     setHand((prev) => shuffleArray(prev));
     clearPicked();
   }
+
   function regroup() {}
 
   function onClickDeck() {
@@ -75,7 +83,9 @@ export default function App() {
     });
   }
 
-  function onCardClick() {}
+  function onCardClick(i) {
+    setPickedIndex((prev) => (prev === i ? null : i));
+  }
 
   const btnBase =
     "rounded-xl border border-white/15 bg-white/10 px-3 py-2 text-sm font-medium text-white/90 shadow-md shadow-black/20 transition hover:-translate-y-0.5 hover:bg-white/15 active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50";
