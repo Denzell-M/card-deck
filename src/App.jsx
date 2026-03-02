@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useReducer } from "react";
 import { Card } from "./components/Card";
 import { Deck } from "./components/Deck";
 import {
@@ -8,83 +8,136 @@ import {
   shuffleArray,
 } from "./game/deckUtils";
 
-export default function App() {
-  // Lazy init so we only create the initial deck once.
-  const [deck, setDeck] = useState(() => makeStandardDeck());
-  const [hand, setHand] = useState([]);
-  const [pickedIndex, setPickedIndex] = useState(null);
+function isWild(card) {
+  return String(card.id).startsWith("WILD-");
+}
 
+function initialState() {
+  return {
+    deck: makeStandardDeck(),
+    hand: [],
+    discard: [],
+    pickedIndex: null,
+  };
+}
+
+function reducer(state, action) {
+  switch (action.type) {
+    case "RESET": {
+      return initialState();
+    }
+
+    case "PICK": {
+      const i = action.index;
+      return {
+        ...state,
+        pickedIndex: state.pickedIndex === i ? null : i,
+      };
+    }
+
+    case "DRAW_ONE": {
+      const { card, nextDeck } = drawOneRandom(state.deck);
+      if (!card) return state;
+
+      return {
+        ...state,
+        deck: nextDeck,
+        hand: [...state.hand, card],
+        pickedIndex: null,
+      };
+    }
+
+    case "DEAL": {
+      const n = action.n;
+
+      // Move semantics: return current (non-wild) hand back to deck, then draw n.
+      // Wild cards (if any) go to discard so cards never duplicate.
+      const toReturn = state.hand.filter((c) => !isWild(c));
+      const toDiscard = state.hand.filter(isWild);
+      const restoredDeck = [...state.deck, ...toReturn];
+      const { drawn, nextDeck } = drawNRandom(restoredDeck, n);
+
+      return {
+        ...state,
+        deck: nextDeck,
+        hand: drawn,
+        discard: [...state.discard, ...toDiscard],
+        pickedIndex: null,
+      };
+    }
+
+    case "TOSS_PICKED": {
+      if (state.pickedIndex == null) return state;
+      const idx = state.pickedIndex;
+      const tossed = state.hand[idx];
+      const nextHand = state.hand.filter((_, i) => i !== idx);
+
+      return {
+        ...state,
+        hand: nextHand,
+        discard: tossed ? [...state.discard, tossed] : state.discard,
+        pickedIndex: null,
+      };
+    }
+
+    case "WILDCARD": {
+      return {
+        ...state,
+        hand: shuffleArray(state.hand),
+        pickedIndex: null,
+      };
+    }
+
+    case "REGROUP": {
+      // Regroup: put hand back into deck (discard wilds), clear picked.
+      const toReturn = state.hand.filter((c) => !isWild(c));
+      const toDiscard = state.hand.filter(isWild);
+      return {
+        ...state,
+        deck: [...state.deck, ...toReturn],
+        hand: [],
+        discard: [...state.discard, ...toDiscard],
+        pickedIndex: null,
+      };
+    }
+
+    default:
+      return state;
+  }
+}
+
+export default function App() {
+  const [state, dispatch] = useReducer(reducer, undefined, initialState);
+
+  const { deck, hand, pickedIndex } = state;
   const remaining = deck.length;
 
-  function clearPicked() {
-    setPickedIndex(null);
-  }
-
   function deal(n) {
-    // Deal should replace the hand with n random cards.
-    // To avoid duplicates or stale state, compute everything from the previous deck + previous hand.
-    setDeck((prevDeck) => {
-      let nextDeck = prevDeck;
-
-      setHand((prevHand) => {
-        const toReturn = prevHand.filter(
-          (card) => !String(card.id).startsWith("WILD-"),
-        );
-        const restoredDeck = [...nextDeck, ...toReturn];
-
-        const result = drawNRandom(restoredDeck, n);
-        nextDeck = result.nextDeck;
-
-        return result.drawn;
-      });
-
-      setPickedIndex(null);
-      return nextDeck;
-    });
+    dispatch({ type: "DEAL", n });
   }
-
-  // function returnHandToDeck() {
-  //   setHand((prevHand) => {
-  //     const toReturn = prevHand.filter(
-  //       (card) => !String(card.id).startsWith("WILD-"),
-  //     );
-  //     setDeck((prevDeck) => [...prevDeck, ...toReturn]);
-  //     return [];
-  //   });
-  //   setPickedIndex(null);
-  // }
 
   function reset() {
-    // brand new deck, empty hand, nothing picked.
-    setDeck(makeStandardDeck());
-    setHand([]);
-    setPickedIndex(null);
+    dispatch({ type: "RESET" });
   }
 
-  function tossPicked() {}
+  function tossPicked() {
+    dispatch({ type: "TOSS_PICKED" });
+  }
 
-  // Not working yet
   function wildcard() {
-    setHand((prev) => shuffleArray(prev));
-    clearPicked();
+    dispatch({ type: "WILDCARD" });
   }
 
-  function regroup() {}
+  function regroup() {
+    dispatch({ type: "REGROUP" });
+  }
 
   function onClickDeck() {
-    setDeck((prevDeck) => {
-      const { card, nextDeck } = drawOneRandom(prevDeck);
-      if (!card) return prevDeck;
-
-      setHand((prevHand) => [...prevHand, card]);
-      clearPicked();
-
-      return nextDeck;
-    });
+    dispatch({ type: "DRAW_ONE" });
   }
 
   function onCardClick(i) {
-    setPickedIndex((prev) => (prev === i ? null : i));
+    dispatch({ type: "PICK", index: i });
   }
 
   const btnBase =
