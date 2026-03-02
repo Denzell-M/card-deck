@@ -1,8 +1,11 @@
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  /* The Vite starter template constrains the app to a centered column.
+     This project uses Tailwind layout classes instead, so make the root full-width. */
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  text-align: inherit;
 }
 
 .logo {
