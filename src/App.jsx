@@ -6,34 +6,50 @@ import {
   drawOneRandom,
   makeStandardDeck,
   shuffleArray,
+  SUITS,
+  VALUES,
 } from "./game/deckUtils";
 
-function isWild(card) {
-  return String(card.id).startsWith("WILD-");
+function randomChoice(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
+}
+
+function makeWildcardCard() {
+  const suit = randomChoice(SUITS);
+  const value = randomChoice(VALUES);
+  const uid =
+    globalThis.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random()}`;
+
+  return {
+    id: `WILD-${uid}`,
+    suit,
+    value,
+  };
 }
 
 function initialState() {
   return {
     deck: makeStandardDeck(),
     hand: [],
-    discard: [],
     pickedIndex: null,
+    discard: [],
   };
 }
 
 function reducer(state, action) {
   switch (action.type) {
     case "RESET": {
-      return initialState();
+      return {
+        ...state,
+        deck: [...state.deck, ...state.hand],
+        hand: [],
+        pickedIndex: null,
+      };
     }
 
     case "PICK": {
       const i = action.index;
 
-      // Spec behavior:
-      // - click a card => it becomes picked
-      // - click the picked card again => unpick
-      // - click another card while one is picked => swap them, then clear picked
       if (state.pickedIndex == null) {
         return { ...state, pickedIndex: i };
       }
@@ -42,7 +58,6 @@ function reducer(state, action) {
         return { ...state, pickedIndex: null };
       }
 
-      // swap
       const a = state.pickedIndex;
       const nextHand = [...state.hand];
       [nextHand[a], nextHand[i]] = [nextHand[i], nextHand[a]];
@@ -65,26 +80,19 @@ function reducer(state, action) {
         pickedIndex: null,
       };
     }
-
     case "DEAL": {
       const n = action.n;
 
-      // Move semantics: return current (non-wild) hand back to deck, then draw n.
-      // Wild cards (if any) go to discard so cards never duplicate.
-      const toReturn = state.hand.filter((c) => !isWild(c));
-      const toDiscard = state.hand.filter(isWild);
-      const restoredDeck = [...state.deck, ...toReturn];
+      const restoredDeck = [...state.deck, ...state.hand];
       const { drawn, nextDeck } = drawNRandom(restoredDeck, n);
 
       return {
         ...state,
         deck: nextDeck,
         hand: drawn,
-        discard: [...state.discard, ...toDiscard],
         pickedIndex: null,
       };
     }
-
     case "TOSS_PICKED": {
       if (state.pickedIndex == null) return state;
       const idx = state.pickedIndex;
@@ -102,20 +110,15 @@ function reducer(state, action) {
     case "WILDCARD": {
       return {
         ...state,
-        hand: shuffleArray(state.hand),
+        hand: [...state.hand, makeWildcardCard()],
         pickedIndex: null,
       };
     }
 
     case "REGROUP": {
-      // Regroup: put hand back into deck (discard wilds), clear picked.
-      const toReturn = state.hand.filter((c) => !isWild(c));
-      const toDiscard = state.hand.filter(isWild);
       return {
         ...state,
-        deck: [...state.deck, ...toReturn],
-        hand: [],
-        discard: [...state.discard, ...toDiscard],
+        hand: shuffleArray(state.hand),
         pickedIndex: null,
       };
     }
